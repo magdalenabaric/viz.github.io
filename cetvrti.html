@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <title>Countries by earthquakes</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poetsen One', sans-serif;
+        }
+
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .chart {
+            flex: 1;
+            margin: 10px;
+        }
+
+        .legend {
+            font-size: 12px;
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid black;
+            border-radius: 5px;
+            visibility: hidden;
+        }
+    </style>
+</head>
+
+<body class="body-index2">
+    <div class="h1-container">
+        <h1 class="h1-1">COUNTRIES BY NUMBER OF EARTHQUAKES</h1>
+    </div>
+    <nav class="poetsen-one-regular">
+        <hr>
+        <a href="prvi.html">EARTHQUAKES IN THE WORLD</a>
+        <a href="drugi.html">EARTHQUAKES BY YEAR</a>
+        <a href="treci.html">EARTHQUAKES BY INTENSITY</a>
+        <a href="">COUNTRIES BY EARTHQUAKES</a>
+        <a href="peti.html">MIGRATION AND EARTHQUAKES</a>
+    </nav>
+    <hr>
+    <div id="tooltip"></div>
+    <svg id="map" width="1200" height="800" style="margin-left: 50; background: white;"></svg>
+
+    <div class="chart-container" id="chart-section">
+        <div class="chart" id="barChart"></div>
+        <div class="chart" id="lineChart"></div>
+        <div class="chart" id="pieChart"></div>
+        <div class="chart" id="legend"></div>
+    </div>
+
+    <script>
+        var width = 1200;
+        var height = 800;
+
+        var projection = d3.geo.mercator()
+            .scale(150)
+            .translate([width / 2, height / 2]);
+
+        var path = d3.geo.path()
+            .projection(projection);
+
+        var svg = d3.select("#map");
+        var tooltip = d3.select("#tooltip");
+
+        d3.json("countries.json", function (error, world) {
+            if (error) throw error;
+
+            var data = world.features;
+            var earthquakeCounts = {};
+
+            d3.json("00-20.json", function (error, earthquakes) {
+                if (error) throw error;
+                earthquakes.features.forEach(function (feature) {
+                    var place = feature.properties.place;
+                    var parts = place.split(",");
+                    var countryName = parts[parts.length - 1].trim();
+                    if (!earthquakeCounts[countryName]) {
+                        earthquakeCounts[countryName] = 0;
+                    }
+                    earthquakeCounts[countryName]++;
+                });
+
+                var maxEarthquakes = d3.max(d3.values(earthquakeCounts));
+                var colorScale = d3.scale.linear()
+                    .domain([0, maxEarthquakes])
+                    .range(["#9AA5E5", "#172A99"]);
+
+                svg.selectAll("path")
+                    .data(data)
+                    .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .style("fill", function (d) {
+                        var countryName = d.properties.name;
+                        var numOfEarthquakes = earthquakeCounts[countryName] || 0;
+                        return colorScale(numOfEarthquakes);
+                    })
+                    .style("stroke", "gray")
+                    .style("stroke-width", 0.5)
+                    .on("mouseover", function (d) {
+                        var countryName = d.properties.name;
+                        var numOfEarthquakes = earthquakeCounts[countryName] || 0;
+                        tooltip.text("Number of earthquakes in " + countryName + ": " + numOfEarthquakes);
+                        tooltip.style("visibility", "visible");
+                    })
+
+                    //Mdn web docs, Element: mousemove event, https://developer.mozilla.org/en-US/docs/Web/API/Element/mousemove_event 
+                    .on("mousemove", function () {
+                        tooltip.style("top", (d3.event.pageY - 10) + "px")
+                            .style("left", (d3.event.pageX + 10) + "px");
+                    })
+                    .on("mouseout", function () {
+                        tooltip.style("visibility", "hidden");
+                    })
+                    .on("click", function (d) {
+                        var countryName = d.properties.name;
+                        var filteredData = earthquakes.features.filter(function (feature) {
+                            var place = feature.properties.place;
+                            var parts = place.split(",");
+                            var featureCountryName = parts[parts.length - 1].trim();
+                            return featureCountryName === countryName;
+                        });
+                        drawChart(filteredData);
+                        drawPieChart(filteredData);
+                        document.getElementById('chart-section').scrollIntoView({ behavior: 'smooth' });
+                    });
+            });
+        });
+
+        var margin = { top: 20, right: 30, bottom: 100, left: 40 };
+        var chartWidth = 400 - margin.left - margin.right;
+        var chartHeight = 300 - margin.top - margin.bottom;
+
+        var chartSvg = d3.select("#barChart")
+            .append("svg")
+            .attr("width", chartWidth + margin.left + margin.right)
+            .attr("height", chartHeight + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var lineChartSvg = d3.select("#lineChart")
+            .append("svg")
+            .attr("width", chartWidth + margin.left + margin.right)
+            .attr("height", chartHeight + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var pieChartSvg = d3.select("#pieChart")
+            .append("svg")
+            .attr("width", chartWidth + margin.left + margin.right)
+            .attr("height", chartHeight + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + (chartWidth / 2) + "," + (chartHeight / 2) + ")");
+
+        var legendSvg = d3.select("#legend")
+            .append("svg")
+            .attr("width", chartWidth / 2)
+            .attr("height", chartHeight)
+            .style("margin-top", "290%");
+
+        function drawChart(data) {
+            chartSvg.selectAll("*").remove();
+            lineChartSvg.selectAll("*").remove();
+
+            var earthquakesByYear = {};
+            data.forEach(function (d) {
+                var year = new Date(d.properties.time).getFullYear();
+                if (!earthquakesByYear[year]) {
+                    earthquakesByYear[year] = 0;
+                }
+                earthquakesByYear[year]++;
+            });
+
+            var dataForChart = Object.keys(earthquakesByYear).map(function (year) {
+                return { year: year, count: earthquakesByYear[year] };
+            });
+
+            var xScale = d3.scale.ordinal()
+                .domain(d3.range(2000, 2021))
+                .rangeBands([0, chartWidth], 0.1);
+
+            var yScale = d3.scale.linear()
+                .domain([0, d3.max(dataForChart, function (d) { return d.count; })])
+                .range([chartHeight, 0]);
+
+            var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .orient("bottom")
+                .tickFormat(d3.format("d"));
+
+            var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .orient("left");
+
+            chartSvg.append("g")
+                .attr("transform", "translate(0," + chartHeight + ")")
+                .call(xAxis)
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end")
+                .style("font-weight", "200")
+                .style("font-size", "0.7em")
+                .attr("dx", "-0.8em")
+                .attr("dy", "0.15em");
+
+            lineChartSvg.append("g")
+                .attr("transform", "translate(0," + chartHeight + ")")
+                .call(xAxis)
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end")
+                .style("font-weight", "200")
+                .style("font-size", "0.7em")
+                .attr("dx", "-0.8em")
+                .attr("dy", "0.15em");
+
+            chartSvg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis);
+
+            chartSvg.selectAll(".bar")
+                .data(dataForChart)
+                .enter()
+                .append("rect")
+                .attr("class", "bar")
+                .attr("x", function (d) { return xScale(d.year); })
+                .attr("width", xScale.rangeBand())
+                .attr("y", chartHeight)
+                .attr("height", 0)
+                .transition()
+                .duration(1000)
+                .attr("y", function (d) { return yScale(d.count); })
+                .attr("height", function (d) { return chartHeight - yScale(d.count); })
+                .style("fill", "#172A99");
+
+            var line = d3.svg.line()
+                .x(function (d) { return xScale(d.year) + xScale.rangeBand() / 2; })
+                .y(function (d) { return yScale(d.count); });
+
+            var linePath = lineChartSvg.append("path")
+                .datum(dataForChart)
+                .attr("class", "line")
+                .attr("d", line)
+                .style("stroke", "#172A99")
+                .style("fill", "none")
+                .style("stroke-width", "2px");
+
+            var totalLength = linePath.node().getTotalLength();
+
+            linePath
+                .attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                .duration(1000)
+                .ease("linear")
+                .attr("stroke-dashoffset", 0);
+
+            lineChartSvg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis);
+        }
+
+        function drawPieChart(data) {
+            pieChartSvg.selectAll("*").remove();
+            legendSvg.selectAll("*").remove();
+
+            var magnitudeCounts = {};
+            data.forEach(function (d) {
+                var magnitude = Math.floor(d.properties.mag);
+                if (!magnitudeCounts[magnitude]) {
+                    magnitudeCounts[magnitude] = 0;
+                }
+                magnitudeCounts[magnitude]++;
+            });
+
+            var dataForPieChart = Object.keys(magnitudeCounts).map(function (magnitude) {
+                return { magnitude: magnitude, count: magnitudeCounts[magnitude] };
+            });
+
+            var radius = Math.min(chartWidth, chartHeight) / 2;
+            var color = d3.scale.category20();
+            var arc = d3.svg.arc()
+                .outerRadius(radius - 10)
+                .innerRadius(0);
+            var pie = d3.layout.pie()
+                .sort(null)
+                .value(function (d) { return d.count; });
+
+            var g = pieChartSvg.selectAll(".arc")
+                .data(pie(dataForPieChart))
+                .enter().append("g")
+                .attr("class", "arc");
+
+            var path = g.append("path")
+                .style("fill", function (d) { return color(d.data.magnitude); })
+                .each(function (d) {
+                    this._current = { startAngle: 0, endAngle: 0 };
+                });
+
+            //Job, J., Livada, Č. (2016),  Priručnik za laboratorijske vježbe iz kolegija Vizualizacija podataka, https://moodle.srce.hr/2023-2024/pluginfile.php/9557158/mod_resource/content/0/Vizualizacija%20podataka%20LV%20priru%C4%8Dnik.pdf
+            // D3, d3-interpolate, https://d3js.org/d3-interpolate 
+            path.transition()
+                .duration(1000)
+                .attrTween("d", function (d) {
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        return arc(interpolate(t));
+                    };
+                });
+
+            var legend = legendSvg.selectAll(".legend")
+                .data(dataForPieChart)
+                .enter().append("g")
+                .attr("class", "legend")
+                .attr("transform", function (d, i) { return "translate(0," + i * 20 + ")"; });
+
+            legend.append("rect")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width", 18)
+                .attr("height", 18)
+                .style("fill", function (d) { return color(d.magnitude); });
+
+            legend.append("text")
+                .attr("x", 24)
+                .attr("y", 9)
+                .attr("dy", ".35em")
+                .style("text-anchor", "start")
+                .text(function (d) { return "Magnitude: " + d.magnitude; });
+        }
+    </script>
+</body>
+
+</html>

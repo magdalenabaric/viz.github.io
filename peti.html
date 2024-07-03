@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+
+    <title>Migration and earthquakes</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap" rel="stylesheet">
+    <style>
+        .line {
+            fill: none;
+            stroke-width: 2px;
+        }
+
+        .axis text {
+            font-size: 12px;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+
+        #chart {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+
+        }
+
+        #chart h2 {
+            text-align: center;
+        }
+
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .bar {
+            fill: steelblue;
+        }
+
+        .legend {
+            font-size: 12px;
+            font-family: sans-serif;
+        }
+
+        .legend rect {
+            stroke-width: 2;
+            fill: white;
+        }
+
+        .hidden {
+            opacity: 0;
+        }
+
+        #country-select {
+            background-color: rgb(46, 46, 46);
+            padding: 1% 1%;
+            color: white;
+            margin-left: 2%;
+        }
+
+        h3 {
+            margin-left: 2%;
+
+        }
+    </style>
+</head>
+
+<body class="body-index2">
+    <div class="h1-container">
+        <h1 class="h1-1">MIGRATION AND EARTHQUAKES</h1>
+    </div>
+    <nav class="poetsen-one-regular">
+        <hr>
+        <a href="prvi.html">EARTHQUAKES IN THE WORLD</a>
+        <a href="drugi.html">EARTHQUAKES BY YEAR</a>
+        <a href="treci.html">EARTHQUAKES BY INTENSITY</a>
+        <a href="cetvrti.html">COUNTRIES BY EARTHQUAKES</a>
+        <a href="">MIGRATION AND EARTHQUAKES</a>
+    </nav>
+    <hr>
+    <h3>Choose country:</h3>
+    <select id="country-select"></select>
+    <div id="chart">
+        <div class="row">
+            <div id="barChartContainer">
+                <h2>Migration Bar Chart</h2>
+            </div>
+            <div id="lineChartContainer">
+                <h2>Migration Line Chart</h2>
+            </div>
+        </div>
+        <div class="row">
+            <div id="combinedBarChartContainer">
+                <h2>Combined Bar Chart</h2>
+            </div>
+            <div id="combinedLineChartContainer">
+                <h2>Combined Line Chart</h2>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var margin = { top: 20, right: 170, bottom: 80, left: 100 },
+            width = 630 - margin.left - margin.right,
+            height = 300 - margin.top - margin.bottom;
+
+        function createSvg(containerId) {
+            return d3.select(containerId)
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .attr("class", "hidden")
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        }
+
+        var svg = createSvg("#barChartContainer");
+        var lineChartSvg = createSvg("#lineChartContainer");
+        var combinedBarChartSvg = createSvg("#combinedBarChartContainer");
+        var combinedLineChartSvg = createSvg("#combinedLineChartContainer");
+
+        d3.json("emig.json", function (error, migrationData) {
+            if (error) throw error;
+
+            d3.json("00-20.json", function (error, earthquakeData) {
+                if (error) throw error;
+
+                var countries = migrationData.filter(function (d) {
+                    return d.Refresh !== undefined && d.Refresh !== "Dataset: International Migration Database" && d.Refresh !== "Country of birth/nationality" && d.Refresh !== "Variable" && d.Refresh !== "Gender" && d.Refresh !== "Year";
+                }).map(function (d) {
+                    return d.Refresh;
+                });
+
+                var select = d3.select("#country-select")
+                    .on("change", function () {
+                        var selectedCountry = this.value;
+                        var filteredMigrationData = migrationData.filter(function (d) {
+                            return d.Refresh === selectedCountry;
+                        });
+                        drawCharts(filteredMigrationData, earthquakeData);
+                    });
+
+                select.selectAll("option")
+                    .data(countries)
+                    .enter()
+                    .append("option")
+                    .text(function (d) { return d; });
+
+                function drawCharts(migrationData, earthquakeData) {
+                    svg.selectAll("*").remove();
+                    lineChartSvg.selectAll("*").remove();
+                    combinedBarChartSvg.selectAll("*").remove();
+                    combinedLineChartSvg.selectAll("*").remove();
+
+                    var migrationYearlyData = [];
+                    for (var i = 2000; i <= 2020; i++) {
+                        var migration = { year: i, count: +migrationData[0]["Column" + (i - 1997)] };
+                        migrationYearlyData.push(migration);
+                    }
+
+                    var earthquakeYearlyData = [];
+                    var earthquakeCountsByYear = {};
+                    earthquakeData.features.forEach(function (d) {
+                        var year = new Date(d.properties.time).getFullYear();
+                        if (year >= 2000 && year <= 2020) {
+                            if (!earthquakeCountsByYear[year]) {
+                                earthquakeCountsByYear[year] = 0;
+                            }
+                            earthquakeCountsByYear[year]++;
+                        }
+                    });
+
+                    for (var i = 2000; i <= 2020; i++) {
+                        var earthquakes = { year: i, count: earthquakeCountsByYear[i] || 0 };
+                        earthquakeYearlyData.push(earthquakes);
+                    }
+
+                    var combinedYearlyData = [];
+                    for (var i = 0; i < migrationYearlyData.length; i++) {
+                        combinedYearlyData.push({
+                            year: migrationYearlyData[i].year,
+                            migrationCount: migrationYearlyData[i].count,
+                            earthquakeCount: earthquakeYearlyData[i].count
+                        });
+                    }
+
+                    var xScale = d3.scale.ordinal()
+                        .domain(migrationYearlyData.map(function (d) { return d.year; }))
+                        .rangeRoundBands([0, width], 0.1);
+
+                    var yScale = d3.scale.linear()
+                        .domain([0, d3.max(migrationYearlyData, function (d) { return d.count; })])
+                        .range([height, 0]);
+
+                    var yScaleEarthquake = d3.scale.linear()
+                        .domain([0, d3.max(earthquakeYearlyData, function (d) { return d.count; })])
+                        .range([height, 0]);
+
+                    var xAxis = d3.svg.axis()
+                        .scale(xScale)
+                        .orient("bottom")
+                        .tickPadding(8)
+                        .tickSize(0);
+
+                    var yAxis = d3.svg.axis()
+                        .scale(yScale)
+                        .orient("left");
+
+                    var yAxisRight = d3.svg.axis()
+                        .scale(yScaleEarthquake)
+                        .orient("right");
+
+                    svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .selectAll("text")
+                        .style("text-anchor", "end")
+                        .attr("dx", "-.8em")
+                        .attr("dy", ".15em")
+                        .attr("transform", function (d) {
+                            return "rotate(-45)"
+                        });
+
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+
+                    svg.selectAll(".bar")
+                        .data(migrationYearlyData)
+                        .enter()
+                        .append("rect")
+                        .attr("class", "bar")
+                        .attr("x", function (d) { return xScale(d.year); })
+                        .attr("width", xScale.rangeBand())
+                        .attr("y", height)
+                        .attr("height", 0)
+                        .style("fill", "#172A99")
+                        .transition()
+                        .duration(1000)
+                        .attr("y", function (d) { return yScale(d.count); })
+                        .attr("height", function (d) { return height - yScale(d.count); });
+
+                    var line = d3.svg.line()
+                        .x(function (d) { return xScale(d.year) + xScale.rangeBand() / 2; })
+                        .y(function (d) { return yScale(d.count); });
+
+                    lineChartSvg.append("path")
+                        .datum(migrationYearlyData)
+                        .attr("class", "line")
+                        .attr("d", line)
+                        .style("stroke", "#172A99")
+                        .style("fill", "none")
+                        .style("stroke-width", "2px")
+                        .attr("stroke-dasharray", function () {
+                            var totalLength = this.getTotalLength();
+                            return totalLength + " " + totalLength;
+                        })
+                        .attr("stroke-dashoffset", function () {
+                            var totalLength = this.getTotalLength();
+                            return totalLength;
+                        })
+                        .transition()
+                        .duration(1000)
+                        .attr("stroke-dashoffset", 0);
+
+                    lineChartSvg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .selectAll("text")
+                        .style("text-anchor", "end")
+                        .attr("dx", "-.8em")
+                        .attr("dy", ".15em")
+                        .attr("transform", function (d) {
+                            return "rotate(-45)"
+                        });
+
+                    lineChartSvg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+
+                    combinedBarChartSvg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .selectAll("text")
+                        .style("text-anchor", "end")
+                        .attr("dx", "-.8em")
+                        .attr("dy", ".15em")
+                        .attr("transform", function (d) {
+                            return "rotate(-45)"
+                        });
+
+                    combinedBarChartSvg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+
+                    combinedBarChartSvg.append("g")
+                        .attr("class", "y axis right")
+                        .attr("transform", "translate(" + width + " ,0)")
+                        .call(yAxisRight);
+
+                    combinedBarChartSvg.selectAll(".bar.migration")
+                        .data(combinedYearlyData)
+                        .enter()
+                        .append("rect")
+                        .attr("class", "bar migration")
+                        .attr("x", function (d) { return xScale(d.year); })
+                        .attr("width", xScale.rangeBand() / 2)
+                        .attr("y", height)
+                        .attr("height", 0)
+                        .style("fill", "#172A99")
+                        .transition()
+                        .duration(1000)
+                        .attr("y", function (d) { return yScale(d.migrationCount); })
+                        .attr("height", function (d) { return height - yScale(d.migrationCount); });
+
+                    ;
+                    combinedBarChartSvg.selectAll(".bar.earthquake")
+                        .data(combinedYearlyData)
+                        .enter()
+                        .append("rect")
+                        .attr("class", "bar earthquake")
+                        .attr("x", function (d) { return xScale(d.year) + xScale.rangeBand() / 2; })
+                        .attr("width", xScale.rangeBand() / 2)
+                        .attr("y", height)
+                        .attr("height", 0)
+                        .style("fill", "#FF883B")
+                        .transition()
+                        .duration(1000)
+                        .attr("y", function (d) { return yScaleEarthquake(d.earthquakeCount); })
+                        .attr("height", function (d) { return height - yScaleEarthquake(d.earthquakeCount); })
+                        ;
+                    var combinedLine = d3.svg.line()
+                        .x(function (d) { return xScale(d.year) + xScale.rangeBand() / 2; })
+                        .y(function (d) { return yScale(d.migrationCount); });
+
+                    var earthquakeLine = d3.svg.line()
+                        .x(function (d) { return xScale(d.year) + xScale.rangeBand() / 2; })
+                        .y(function (d) { return yScaleEarthquake(d.earthquakeCount); });
+
+                    combinedLineChartSvg.append("path")
+                        .datum(combinedYearlyData)
+                        .attr("class", "line migration")
+                        .attr("d", combinedLine)
+                        .style("stroke", "#172A99")
+                        .style("fill", "none")
+                        .style("stroke-width", "2px").attr("stroke-dasharray", function () {
+                            var totalLength = this.getTotalLength();
+                            return totalLength + " " + totalLength;
+                        })
+                        .attr("stroke-dashoffset", function () {
+                            var totalLength = this.getTotalLength();
+                            return totalLength;
+                        })
+                        .transition()
+                        .duration(1000)
+                        .attr("stroke-dashoffset", 0);
+
+                    combinedLineChartSvg.append("path")
+                        .datum(combinedYearlyData)
+                        .attr("class", "line earthquake")
+                        .attr("d", earthquakeLine)
+                        .style("stroke", "#FF883B")
+                        .style("fill", "none")
+                        .style("stroke-width", "2px")
+                        .attr("stroke-dasharray", function () {
+                            var totalLength = this.getTotalLength();
+                            return totalLength + " " + totalLength;
+                        })
+                        .attr("stroke-dashoffset", function () {
+                            var totalLength = this.getTotalLength();
+                            return totalLength;
+                        })
+                        .transition()
+                        .duration(1000)
+                        .attr("stroke-dashoffset", 0);
+
+                    combinedLineChartSvg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+
+                    combinedLineChartSvg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .selectAll("text")
+                        .style("text-anchor", "end")
+                        .attr("dx", "-.8em")
+                        .attr("dy", ".15em")
+                        .attr("transform", function (d) {
+                            return "rotate(-45)"
+                        });
+
+                    combinedLineChartSvg.append("g")
+                        .attr("class", "y axis right")
+                        .attr("transform", "translate(" + width + " ,0)")
+                        .call(yAxisRight);
+
+                    function addLegend(svg, labels, colors) {
+                        var legend = svg.selectAll(".legend")
+                            .data(labels)
+                            .enter().append("g")
+                            .attr("class", "legend")
+                            .attr("transform", function (d, i) { return "translate(0," + i * 20 + ")"; });
+
+                        legend.append("rect")
+                            .attr("x", width + 50)
+                            .attr("width", 10)
+                            .attr("height", 10)
+                            .style("fill", function (d, i) { return colors[i]; });
+
+                        legend.append("text")
+                            .attr("x", width + 70)
+                            .attr("y", 9)
+                            .attr("dy", ".35em")
+                            .style("text-anchor", "start")
+                            .text(function (d) { return d; });
+                    }
+
+                    addLegend(svg, ["Migration Count"], ["#172A99"]);
+                    addLegend(lineChartSvg, ["Migration Count"], ["#172A99"]);
+                    addLegend(combinedBarChartSvg, ["Migration Count", "Earthquake Count"], ["#172A99", "#FF883B"]);
+                    addLegend(combinedLineChartSvg, ["Migration Count", "Earthquake Count"], ["#172A99", "#FF883B"]);
+
+                    d3.selectAll("svg.hidden")
+                        .attr("class", "visible");
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
