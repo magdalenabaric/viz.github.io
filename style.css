@@ -1,0 +1,205 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.poetsen-one-regular {
+    font-family: "Poetsen One", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: "Poetsen One", sans-serif;
+
+}
+
+#potres-info {
+    background-color: #222222D4;
+    position: absolute;
+    display: none;
+    padding: 1%;
+    border-radius: 5px;
+    z-index: 10;
+    color: #ffffff;
+}
+
+#legend {
+    position: absolute;
+    top: 110%;
+    right: -1%;
+}
+
+body {
+    background-color: rgb(232, 232, 232);
+}
+
+nav {
+    margin-top: 3%;
+    margin-left: 5%;
+}
+
+nav a {
+    background-color: #575757;
+    color: white;
+    padding-top: 1%;
+    padding-bottom: 1%;
+    padding-left: 1%;
+    padding-right: 1%;
+    margin-left: 3%;
+    text-decoration: none;
+}
+
+svg {
+    display: block;
+}
+
+#map {
+    margin-left: 7%;
+}
+
+/*naslobvna*/
+.slika1 {
+    width: 100%;
+    height: 100vh;
+    position: absolute;
+    z-index: -999;
+    top: 0;
+}
+
+.h1-prvi {
+    color: rgb(217, 217, 217);
+    width: 60%;
+    background: #222222d4;
+    margin-left: 20%;
+    font-size: 3em;
+    padding-left: 3%;
+    padding-top: 2%;
+    padding-bottom: 2%;
+
+}
+
+.h2-prvi {
+    background: #222222d4;
+    color: rgb(217, 217, 217);
+    text-align: center;
+    width: 60%;
+    margin-left: 20%;
+    padding-bottom: 2%;
+
+}
+
+.naslov {
+    padding-top: 15%;
+}
+
+.body-index nav {
+    margin-left: 0%;
+    margin-top: 10%;
+}
+
+.body-index nav a {
+    font-size: 0.9em;
+    background: #222222d4;
+
+}
+
+.body-index hr {
+    margin-bottom: 2%;
+    margin-top: 2%;
+    margin-left: 2%;
+    margin-right: 2%;
+
+    color: rgb(217, 217, 217);
+}
+
+/*potresi u svijetu*/
+.h1-container {
+    font-family: "Poetsen One";
+    background-image: url('slika1.jpg');
+    color: rgb(217, 217, 217);
+    text-align: center;
+    padding-top: 1.5%;
+    padding-bottom: 1.5%;
+    background-color: #222222e3;
+
+}
+
+.h1-1 {
+    background: #222222d4;
+    color: rgb(217, 217, 217);
+    text-align: center;
+    width: 100%;
+    padding-top: 2%;
+    padding-bottom: 2%;
+}
+
+.body-index2 hr {
+    margin-bottom: 2%;
+    margin-top: 2%;
+    margin-left: 2%;
+    margin-right: 2%;
+    color: rgb(217, 217, 217);
+}
+
+.body-index2 nav a {
+    font-size: 0.9em;
+    background: #222222d4;
+}
+
+.body-index2 nav {
+    margin-left: 0%;
+}
+
+/*po godinama*/
+.select-div {
+    font-size: 1.4em;
+    margin-left: 3%;
+    margin-bottom: 3%;
+}
+
+#year-select {
+    background-color: #222222d4;
+    padding: 0.5% 2%;
+    color: rgb(217, 217, 217);
+    font-size: 0.7em;
+}
+
+.h1-drugi {
+    font-family: "Poetsen One";
+    text-align: center;
+    margin-top: 10%;
+    background-color: #222222d4;
+    color: rgb(217, 217, 217);
+    padding-top: 2%;
+    padding-bottom: 2%;
+    width: 60%;
+    margin-left: 20%;
+}
+
+#play-button i {
+    color: #3849B2;
+    font-size: 2em;
+}
+
+#play-button {
+    margin-left: 5%;
+    border: none;
+}
+
+#pause-button i {
+    color: #3849B2;
+    font-size: 2em;
+}
+
+#pause-button {
+    margin-left: 1%;
+    border: none;
+    margin-top: 5%;
+}

@@ -1,0 +1,148 @@
+<html lang="en">
+
+<head>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <title>Earthquakes in the world</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap" rel="stylesheet">
+
+</head>
+
+<body class="body-index2">
+    <div class="h1-container">
+        <h1 class="h1-1">EARTHQUAKES IN THE WORLD</h1>
+    </div>
+    <nav class="poetsen-one-regular">
+        <hr>
+        <a href="">EARTHQUAKES IN THE WORLD</a>
+        <a href="drugi.html">EARTHQUAKES BY YEAR</a>
+        <a href="treci.html">EARTHQUAKES BY INTENSITY</a>
+        <a href="cetvrti.html">COUNTRIES BY EARTHQUAKES</a>
+        <a href="peti.html">MIGRATION AND EARTHQUAKES</a>
+    </nav>
+    <hr>
+    <div id="potres-info">
+        <p id="lokacija"></p>
+        <p id="magnituda"></p>
+    </div>
+
+    <script>
+        var width = 1200;
+        var height = 800;
+
+
+        //Job, J., Livada, Č. (2016),  Priručnik za laboratorijske vježbe iz kolegija Vizualizacija podataka, https://moodle.srce.hr/2023-2024/pluginfile.php/9557158/mod_resource/content/0/Vizualizacija%20podataka%20LV%20priru%C4%8Dnik.pdf
+        var projection = d3.geo.mercator()
+            .scale(150)
+            .translate([width / 2, height / 2]);
+
+        var path = d3.geo.path()
+            .projection(projection);
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("margin-left", "50")
+            .style("background", "white")
+            .call(d3.behavior.zoom().scaleExtent([0.3, 5])
+                .on("zoom", onZoom))
+            .append("g");
+
+        d3.select("body")
+            .append("div")
+            .attr("id", "name")
+            .style("color", "#673CA5")
+            .style("text-align", "center")
+            .style("font-size", "40px");
+
+        d3.json("countries.json", function (error, world) {
+            var data = world.features;
+            svg.selectAll("path")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .style("fill", "#E4E4E4")
+                .style("stroke", "#22222264")
+                .style("stroke-width", 0.3)
+                .style("stroke-opacity", 1);
+        });
+
+        d3.json("00-20.json", function (error, earthquakes) {
+            var data = earthquakes.features;
+
+            svg.selectAll("circle")
+                .data(data)
+                .enter()
+
+                .append("circle")
+                .attr("cx", function (d) {
+                    return projection(d.geometry.coordinates)[0];
+                })
+                .attr("cy", function (d) {
+                    return projection(d.geometry.coordinates)[1];
+                })
+                .attr("r", 2)
+                .style("fill", "#3849B2")
+                .style("stroke", "gray")
+                .style("stroke-width", 0.2)
+                .on("mouseover", function (d) {
+                    d3.select(this).style("fill", "#FF883B");
+                })
+
+                //StackOverflow, “d3 - select/unselect node onclick”, https://stackoverflow.com/questions/23580385/d3-select-unselect-node-onclick
+                .on("mouseout", function (d) {
+                    if (!d3.select(this).classed("clicked")) {
+                        d3.select(this).style("fill", "#3849B2");
+                    }
+                })
+                .on("click", function (d) {
+                    d3.selectAll("circle").classed("clicked", false).style("fill", "#3849B2");
+                    d3.select(this).classed("clicked", true).style("fill", "#BF4E05");
+                    d3.event.stopPropagation();
+                    openInfoWindow(d3.event.pageX, d3.event.pageY, d);
+                    document.getElementById("potres-info").style.display = "block";
+                });
+        });
+        function onZoom() {
+            svg.attr("transform", "translate (" + d3.event.translate + ") scale (" + d3.event.scale + ")");
+        }
+
+        window.addEventListener('resize', function () {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            svg.attr("width", width).attr("height", height);
+        });
+
+        function openInfoWindow(x, y, data) {
+            var potresInfo = document.getElementById("potres-info");
+            var lokacijaParagraf = document.getElementById("lokacija");
+            var magnitudaParagraf = document.getElementById("magnituda");
+
+            lokacijaParagraf.textContent = "Lokacija: " + data.properties.place;
+            magnitudaParagraf.textContent = "Magnituda: " + data.properties.mag;
+
+            potresInfo.style.left = (x + 10) + "px";
+            potresInfo.style.top = (y + 10) + "px";
+        }
+
+        //StackOverflow, “Check if clicked element is descendant of parent, otherwise remove parent element”,  https://stackoverflow.com/questions/34621987/check-if-clicked-element-is-descendant-of-parent-otherwise-remove-parent-elemen 
+        document.addEventListener('click', function (event) {
+            var potresInfo = document.getElementById("potres-info");
+
+            if (!potresInfo.contains(event.target)) {
+                potresInfo.style.display = "none";
+            }
+        });
+
+        document.getElementById("potres-info").addEventListener('click', function (event) {
+            event.stopPropagation();
+        });
+    </script>
+</body>
+
+</html>

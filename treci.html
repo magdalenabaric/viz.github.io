@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <title>Earthquakes by itensity</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap" rel="stylesheet">
+</head>
+
+<body class="body-index2">
+    <div class="h1-container">
+        <h1 class="h1-1">EARTHQUAKES BY INTENSITY</h1>
+    </div>
+    <nav class="poetsen-one-regular">
+        <hr>
+        <a href="prvi.html">EARTHQUAKES IN THE WORLD</a>
+        <a href="drugi.html">EARTHQUAKES BY YEAR</a>
+        <a href="">EARTHQUAKES BY INTENSITY</a>
+        <a href="cetvrti.html">COUNTRIES BY EARTHQUAKES</a>
+        <a href="peti.html">MIGRATION AND EARTHQUAKES</a>
+    </nav>
+    <hr>
+    <div id="potres-info">
+        <p id="lokacija"></p>
+        <p id="magnituda"></p>
+    </div>
+    <div id="legend"></div>
+
+    <script>
+        var width = 1200;
+        var height = 800;
+
+        var projection = d3.geo.mercator()
+            .scale(150)
+            .translate([width / 2, height / 2]);
+
+        var path = d3.geo.path()
+            .projection(projection);
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("margin-left", "50")
+            .style("background", "white")
+            .call(d3.behavior.zoom().scaleExtent([0.3, 5])
+                .on("zoom", onZoom))
+            .append("g");
+
+        var colorScale = d3.scale.linear()
+            .domain([5, 6, 7, 8, 9, 10, 11])
+            .range(["#3849B2", "#4D66F4", "#8A9BFF", "#B9C3FD", "#E1E5FF", "#F9EBEA", "#CD6155"]);
+
+        d3.select("body")
+            .append("div")
+            .attr("id", "name")
+            .style("color", "white")
+            .style("text-align", "center")
+            .style("font-size", "40px");
+
+        d3.json("countries.json", function (error, world) {
+            var data = world.features;
+            svg.selectAll("path")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .style("fill", "#E4E4E4")
+                .style("stroke", "#22222264")
+                .style("stroke-width", 0.3)
+                .style("stroke-opacity", 1);
+        });
+
+        d3.json("00-20.json", function (error, earthquakes) {
+            if (error) throw error;
+
+            var podaci = earthquakes.features;
+            var minMagnitude = d3.min(podaci, function (d) {
+                return d.properties.mag || 0;
+            });
+            var maxMagnitude = d3.max(podaci, function (d) {
+                return d.properties.mag || 0;
+            });
+
+            svg.selectAll("circle")
+                .data(podaci)
+                .enter()
+                .append("circle")
+                .attr("cx", function (d) {
+                    return projection(d.geometry.coordinates)[0];
+                })
+                .attr("cy", function (d) {
+                    return projection(d.geometry.coordinates)[1];
+                })
+                .attr("r", 2)
+                .style("stroke", "gray")
+                .style("stroke-width", 0.2)
+                .on("mouseover", function (d) {
+                    d3.select(this).style("fill", "#FF883B");
+                })
+                .on("mouseout", function (d) {
+                    if (!d3.select(this).classed("clicked")) {
+                        d3.select(this).style("fill", "#3849B2");
+                    }
+                })
+                .on("click", function (d) {
+
+                    d3.event.stopPropagation();
+                    openInfoWindow(d3.event.pageX, d3.event.pageY, d);
+                    document.getElementById("potres-info").style.display = "block";
+                })
+                .style("fill", function (d) {
+                    if (d.properties.mag) {
+                        if (d.properties.mag >= 5 && d.properties.mag < 5.5) {
+                            return "#BACEFF";
+                        } else if (d.properties.mag >= 5.5 && d.properties.mag < 6) {
+                            return "#9AB7FF";
+                        }
+                        else if (d.properties.mag >= 6 && d.properties.mag < 6.5) {
+                            return "#749BFF";
+                        }
+                        else if (d.properties.mag >= 6.5 && d.properties.mag < 7) {
+                            return "#4F81FF";
+                        } else if (d.properties.mag >= 7 && d.properties.mag < 7.5) {
+                            return "#2060FF";
+
+                        } else if (d.properties.mag >= 7.5 && d.properties.mag < 8) {
+                            return "#0049FF";
+                        } else if (d.properties.mag >= 8 && d.properties.mag < 8.5) {
+                            return "#0043EA";
+                        }
+                        else if (d.properties.mag >= 8 && d.properties.mag < 8.5) {
+                            return "#0137BE";
+                        }
+                        else if (d.properties.mag >= 9 && d.properties.mag < 9.5) {
+                            return "#022E9C";
+                        } else if (d.properties.mag >= 9.5 && d.properties.mag < 10) {
+                            return "#002277";
+                        } else if (d.properties.mag >= 10.5 && d.properties.mag < 11) {
+                            return "#011D64";
+                        } else if (d.properties.mag >= 11) {
+                            return "#01164B";
+                        }
+                    }
+                    return "gray";
+                });
+        });
+
+        function onZoom() {
+            svg.attr("transform", "translate (" + d3.event.translate + ") scale (" + d3.event.scale + ")");
+        }
+
+        var legendData = [
+            { color: "#BACEFF", label: "5 - 5.5" },
+            { color: "#9AB7FF", label: "5.5 - 6" },
+            { color: "#749BFF", label: "6 - 6.5" },
+            { color: "#4F81FF", label: "6.5 - 7" },
+            { color: "#2060FF", label: "7 - 7.5" },
+            { color: "#0049FF", label: "7.5 - 8" },
+            { color: "#0043EA", label: "8 - 8.5" },
+            { color: "#0137BE", label: "8.5 - 9" },
+            { color: "#022E9C", label: "9.5 - 10" },
+            { color: "#002277", label: "10 - 10.5" },
+            { color: "#011D64", label: "10.5 - 11" },
+            { color: "#01164B", label: "11+" }
+        ];
+        var legend = d3.select("#legend").append("svg")
+            .attr("width", 200)
+            .attr("height", 300)
+            .append("g");
+        var legendRectSize = 18;
+        var legendSpacing = 4;
+
+        var legendRects = legend.selectAll(".legend-rect")
+            .data(legendData)
+            .enter().append("rect")
+            .attr("class", "legend-rect")
+            .attr("x", 0)
+            .attr("y", function (d, i) { return i * (legendRectSize + legendSpacing); })
+            .attr("width", legendRectSize)
+            .attr("height", legendRectSize)
+            .style("fill", function (d) { return d.color; });
+
+        var legendText = legend.selectAll(".legend-text")
+            .data(legendData)
+            .enter().append("text")
+            .attr("class", "legend-text")
+            .attr("x", legendRectSize + legendSpacing)
+            .attr("y", function (d, i) { return i * (legendRectSize + legendSpacing) + (legendRectSize / 2); })
+            .attr("dy", "0.35em")
+            .text(function (d) { return d.label; });
+
+
+        function openInfoWindow(x, y, data) {
+            var potresInfo = document.getElementById("potres-info");
+            var lokacijaParagraf = document.getElementById("lokacija");
+            var magnitudaParagraf = document.getElementById("magnituda");
+
+            lokacijaParagraf.textContent = "Lokacija: " + data.properties.place;
+            magnitudaParagraf.textContent = "Magnituda: " + data.properties.mag;
+
+            potresInfo.style.left = (x + 10) + "px";
+            potresInfo.style.top = (y + 10) + "px";
+        }
+
+        document.addEventListener('click', function (event) {
+            var potresInfo = document.getElementById("potres-info");
+            if (!potresInfo.contains(event.target)) {
+                potresInfo.style.display = "none";
+            }
+        });
+        document.getElementById("potres-info").addEventListener('click', function (event) {
+            event.stopPropagation();
+        });
+    </script>
+</body>
+
+</html>
